@@ -1,0 +1,93 @@
+openapi: 3.1.0
+info:
+  title: Developer Platform API
+  description: Interactive API reference for Managing Transfers, Accounts, and Webhooks.
+  version: 1.0.0
+servers:
+  - url: https://api.example.com/v1
+    description: Production Environment
+  - url: https://sandbox.example.com/v1
+    description: Sandbox Environment
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Pass your API bearer token in the authorization header.
+
+security:
+  - BearerAuth: []
+
+paths:
+  /transfers:
+    post:
+      summary: Create a Transfer
+      description: Initiates a new funds transfer between accounts.
+      tags:
+        - Transfers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - amount
+                - currency
+                - recipient_id
+              properties:
+                amount:
+                  type: number
+                  example: 250.00
+                currency:
+                  type: string
+                  example: "USD"
+                recipient_id:
+                  type: string
+                  example: "rec_987654321"
+      responses:
+        '201':
+          description: Transfer created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "tr_123456789"
+                  status:
+                    type: string
+                    example: "processing"
+                  created_at:
+                    type: string
+                    example: "2026-09-14T10:00:00Z"
+
+  /transfers/{id}:
+    get:
+      summary: Get Transfer Details
+      description: Fetch status and metadata for a specific transfer.
+      tags:
+        - Transfers
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "tr_123456789"
+      responses:
+        '200':
+          description: Transfer details retrieved successfully
+
+  /webhooks/subscriptions:
+    get:
+      summary: List Webhook Subscriptions
+      description: Returns active webhook endpoints configured for event updates.
+      tags:
+        - Webhooks
+      responses:
+        '200':
+          description: List of registered webhooks
