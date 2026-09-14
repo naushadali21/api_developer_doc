@@ -1,50 +1,7 @@
 {
-  "$schema": "https://cdn.jsdelivr.net/npm/@scalar/cli/config.schema.json",
   "site": {
     "title": "Developer Platform Docs",
     "favicon": "https://scalar.com/favicon.ico"
   },
-  "theme": "purple",
-  "navigation": [
-    {
-      "title": "Guides",
-      "items": [
-        {
-          "title": "Overview",
-          "link": "/",
-          "filepath": "./guides/index.md"
-        },
-        {
-          "title": "Getting Started",
-          "link": "/guides/getting-started",
-          "filepath": "./guides/getting-started.md"
-        },
-        {
-          "title": "Authentication",
-          "link": "/guides/authentication",
-          "filepath": "./guides/authentication.md"
-        },
-        {
-          "title": "Webhooks & Events",
-          "link": "/guides/webhooks",
-          "filepath": "./guides/webhooks.md"
-        }
-      ]
-    },
-    {
-      "title": "API Reference",
-      "items": [
-        {
-          "title": "REST API Reference",
-          "link": "/api-reference",
-          "spec": "./openapi.yaml"
-        }
-      ]
-    }
-  ],
-  "reference": {
-    "authentication": {
-      "preferredSecurityScheme": "BearerAuth"
-    }
-  }
+  "theme": "purple"
 }
