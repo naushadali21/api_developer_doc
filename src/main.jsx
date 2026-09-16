@@ -15,30 +15,23 @@ import { ApiReferenceReact } from '@scalar/api-reference-react'
 import '@scalar/api-reference-react/style.css'
 
 // 1. DYNAMICALLY SCAN ALL MARKDOWN FILES IN /guides
-// { eager: true, query: '?raw' } imports content directly at build time
 const guideFiles = import.meta.glob('../guides/*.md', { eager: true, query: '?raw' })
 
-// Process markdown files into a clean data array
 const guides = Object.entries(guideFiles).map(([filepath, fileModule]) => {
   const content = fileModule.default || fileModule
-  
-  // Extract slug from filename (e.g., "../guides/getting-started.md" -> "getting-started")
   const filename = filepath.split('/').pop().replace('.md', '')
   const slug = filename === 'index' ? 'overview' : filename
 
-  // Extract frontmatter title if available, otherwise generate title from filename
   const titleMatch = content.match(/^---\s*\ntitle:\s*(.*?)\n---/m)
   const title = titleMatch
     ? titleMatch[1].trim()
     : filename.replace(/[-_]/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
 
-  // Strip frontmatter from raw content for display
   const cleanContent = content.replace(/^---\s*\n[\s\S]*?\n---\s*\n?/, '')
 
   return { slug, title, content: cleanContent }
 })
 
-// Sort guides so "Overview" or "Getting Started" comes first if present
 guides.sort((a, b) => {
   if (a.slug === 'overview') return -1
   if (b.slug === 'overview') return 1
@@ -48,10 +41,24 @@ guides.sort((a, b) => {
 // 2. DYNAMICALLY SCAN ALL API SPECS IN /public/specs/
 const specFiles = import.meta.glob('/public/specs/*.yaml', { query: '?url', eager: true })
 
-const apiSpecs = Object.keys(specFiles).map((filepath) => {
-  const filename = filepath.split('/').pop().replace('.yaml', '')
-  const title = filename.replace(/[-_]/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
-  return { slug: filename, title, url: `/specs/${filename}.yaml` }
+const apiSpecs = Object.entries(specFiles).map(([filepath, module]) => {
+  const rawFilename = filepath.split('/').pop() // e.g., "transfers.yaml" or "01-transfers.yaml"
+  const filenameWithoutExt = rawFilename.replace('.yaml', '')
+
+  // Extract clean title and slug without breaking original file mapping
+  const orderMatch = filenameWithoutExt.match(/^(\d+)[-_](.*)$/)
+  const cleanSlug = orderMatch ? orderMatch[2] : filenameWithoutExt
+
+  const title = cleanSlug
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+
+  return {
+    slug: cleanSlug,
+    title,
+    // Store original exact file URL mapped from public directory
+    specUrl: `/specs/${rawFilename}`
+  }
 })
 
 // Markdown link Router Interceptor
@@ -68,7 +75,7 @@ function MarkdownGuide({ content }) {
       }
 
       return (
-        <a href={href} onClick={handleClick} style={{ color: '#6366f1', fontWeight: 600 }}>
+        <a href={href} onClick={handleClick} style={{ color: '#0066cc', fontWeight: 600, textDecoration: 'none' }}>
           {children}
         </a>
       )
@@ -76,19 +83,26 @@ function MarkdownGuide({ content }) {
   }
 
   return (
-    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-      {content}
-    </ReactMarkdown>
+    <div className="markdown-body" style={{ padding: '32px 48px', maxWidth: '880px', margin: '0 auto' }}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+        {content}
+      </ReactMarkdown>
+    </div>
   )
 }
 
 // Dynamic Wrapper for Scalar API Reference Viewer
-function ApiReferenceViewer() {
+function ApiReferenceViewer({ specs }) {
   const { specName } = useParams()
-  const specUrl = `/specs/${specName}.yaml`
+  
+  // Find matching spec object using cleanSlug
+  const matchedSpec = specs.find((s) => s.slug === specName)
+  
+  // Fall back to direct name if not found in map
+  const specUrl = matchedSpec ? matchedSpec.specUrl : `/specs/${specName}.yaml`
 
   return (
-    <div style={{ margin: '-40px', height: '100vh' }}>
+    <div style={{ height: 'calc(100vh - 56px)', width: '100%' }}>
       <ApiReferenceReact
         key={specName}
         configuration={{
@@ -102,51 +116,68 @@ function ApiReferenceViewer() {
 
 function Layout() {
   const navStyle = ({ isActive }) => ({
-    display: 'block',
-    padding: '8px 12px',
+    display: 'flex',
+    alignItems: 'center',
+    padding: '6px 12px',
     borderRadius: '6px',
     textDecoration: 'none',
-    color: isActive ? '#4338ca' : '#374151',
-    background: isActive ? '#e0e7ff' : 'transparent',
-    fontWeight: isActive ? 'bold' : 'normal',
-    marginBottom: '4px'
+    fontSize: '13px',
+    fontWeight: isActive ? '600' : '500',
+    color: isActive ? 'var(--scalar-color-1, #1c1e21)' : 'var(--scalar-color-2, #646b79)',
+    backgroundColor: isActive ? 'var(--scalar-background-2, #f1f3f5)' : 'transparent',
+    transition: 'all 0.15s ease'
   })
 
   const defaultGuideSlug = guides.length > 0 ? guides[0].slug : 'overview'
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'sans-serif' }}>
-      {/* Sidebar Navigation */}
-      <aside style={{ width: '260px', borderRight: '1px solid #eee', padding: '20px', background: '#f9f9f9' }}>
-        <h3 style={{ marginTop: 0 }}>Guides</h3>
-        <nav style={{ marginBottom: '20px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      {/* Top Header Navigation matching Scalar UI */}
+      <header
+        style={{
+          height: '56px',
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0 24px',
+          borderBottom: '1px solid var(--scalar-border-color, #e5e7eb)',
+          backgroundColor: 'var(--scalar-background-1, #ffffff)',
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
+          gap: '24px'
+        }}
+      >
+        <div style={{ fontWeight: 700, fontSize: '15px', color: '#1c1e21', paddingRight: '12px' }}>
+          Docs
+        </div>
+
+        <nav style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+          {/* Guides Links */}
           {guides.map((guide) => (
             <NavLink key={guide.slug} to={`/guides/${guide.slug}`} style={navStyle}>
               {guide.title}
             </NavLink>
           ))}
-        </nav>
 
-        {apiSpecs.length > 0 && (
-          <>
-            <h3>API References</h3>
-            <nav>
-              {apiSpecs.map((spec) => (
-                <NavLink key={spec.slug} to={`/api-reference/${spec.slug}`} style={navStyle}>
-                  {spec.title}
-                </NavLink>
-              ))}
-            </nav>
-          </>
-        )}
-      </aside>
+          {/* Separator Divider */}
+          {guides.length > 0 && apiSpecs.length > 0 && (
+            <div style={{ width: '1px', height: '18px', backgroundColor: '#e5e7eb', margin: '0 8px' }} />
+          )}
+
+          {/* API Specs Links */}
+          {apiSpecs.map((spec) => (
+            <NavLink key={spec.slug} to={`/api-reference/${spec.slug}`} style={navStyle}>
+              {spec.title} API
+            </NavLink>
+          ))}
+        </nav>
+      </header>
 
       {/* Main Content Area */}
-      <main style={{ flex: 1, padding: '40px', maxWidth: '850px' }}>
+      <main style={{ flex: 1, backgroundColor: '#ffffff' }}>
         <Routes>
           <Route path="/" element={<Navigate to={`/guides/${defaultGuideSlug}`} replace />} />
           
-          {/* Dynamically Generate Markdown Routes */}
           {guides.map((guide) => (
             <Route
               key={guide.slug}
@@ -155,8 +186,7 @@ function Layout() {
             />
           ))}
 
-          {/* Dynamic Route for Scalar API References */}
-          <Route path="/api-reference/:specName" element={<ApiReferenceViewer />} />
+          <Route path="/api-reference/:specName" element={<ApiReferenceViewer specs={apiSpecs} />} />
         </Routes>
       </main>
     </div>
