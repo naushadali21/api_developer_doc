@@ -1,6 +1,6 @@
 # BSA Questionnaire APIs
 
-# Overview â€” When to Call These APIs
+# Overview — When to Call These APIs
 
 When a transaction is placed **on BSA HOLD**, UniTeller sends a webhook event to the partner indicating that additional user information and supporting documents are required before the transaction can be processed further.
 
